@@ -18,22 +18,41 @@ function getEffectiveDuration(config: SessionConfig): number {
 export function TheaterMode({ images, config, onExit }: Props) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
+  const [isEnded, setIsEnded] = useState(false)
   const duration = getEffectiveDuration(config)
 
   function handleNext() {
-    setIndex(i => (i + 1) % images.length)
+    setIndex(i => {
+      if (i === images.length - 1) {
+        setIsEnded(true)
+        return i
+      }
+      return i + 1
+    })
   }
 
   const { timeLeft, isPaused, pause, resume, reset } = useTimer(duration, handleNext)
 
+  useEffect(() => {
+    if (isEnded) pause()
+  }, [isEnded])
+
   function goNext() {
+    if (isEnded) return
+    if (index === images.length - 1) {
+      setIsEnded(true)
+      return
+    }
     reset(duration)
     setFlipped(false)
-    setIndex(i => (i + 1) % images.length)
+    setIndex(i => i + 1)
   }
 
   function goBack() {
-    if (index > 0) {
+    if (isEnded) {
+      reset(duration)
+      setIsEnded(false)
+    } else if (index > 0) {
       reset(duration)
       setFlipped(false)
       setIndex(i => i - 1)
@@ -69,7 +88,7 @@ export function TheaterMode({ images, config, onExit }: Props) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPaused, index])
+  }, [isPaused, index, isEnded])
 
   const current = images[index]
   const progress = timeLeft / duration
@@ -114,12 +133,29 @@ export function TheaterMode({ images, config, onExit }: Props) {
               alt={current.alt}
               className="max-w-full max-h-full object-contain"
               initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
+              animate={{ opacity: isEnded ? 0.2 : 1, x: 0 }}
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.25 }}
             />
           </AnimatePresence>
         </div>
+
+        {/* Session completed overlay */}
+        <AnimatePresence>
+          {isEnded && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <p className="text-white text-4xl font-semibold tracking-wide drop-shadow-lg">
+                Session Completed
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* HUD bottom bar */}
@@ -155,7 +191,8 @@ export function TheaterMode({ images, config, onExit }: Props) {
           </button>
           <button
             onClick={goNext}
-            className="p-3 rounded-full text-white hover:bg-white/10 transition-colors"
+            disabled={isEnded}
+            className="p-3 rounded-full text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <SkipForward className="w-5 h-5" />
           </button>
