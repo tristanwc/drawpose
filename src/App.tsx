@@ -51,6 +51,16 @@ function App() {
     setSelectedIds(new Set())
   }
 
+  function removeImage(id: string) {
+    setImages(prev => prev.filter(img => img.id !== id))
+    setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next })
+  }
+
+  function removeSelected() {
+    setImages(prev => prev.filter(img => !selectedIds.has(img.id)))
+    setSelectedIds(new Set())
+  }
+
   function toggleImage(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -117,6 +127,8 @@ function App() {
         onToggle={toggleImage}
         onSelectAll={selectAll}
         onDeselectAll={deselectAll}
+        onRemove={removeImage}
+        onRemoveSelected={removeSelected}
         nextBookmark={nextBookmark}
         onLoadMore={loadMore}
       />

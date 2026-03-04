@@ -1,15 +1,17 @@
+import { X } from 'lucide-react'
 import type { ImageItem } from '../types'
 
 type Props = {
   image: ImageItem
   selected: boolean
   onToggle: (id: string) => void
+  onRemove?: (id: string) => void
   masonry?: boolean
   onHoverStart?: () => void
   onHoverEnd?: () => void
 }
 
-export function ImageCard({ image, selected, onToggle, masonry, onHoverStart, onHoverEnd }: Props) {
+export function ImageCard({ image, selected, onToggle, onRemove, masonry, onHoverStart, onHoverEnd }: Props) {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault()
@@ -44,6 +46,16 @@ export function ImageCard({ image, selected, onToggle, masonry, onHoverStart, on
       {/* Selection ring */}
       {selected && (
         <div className="absolute inset-0 rounded-lg ring-2 ring-indigo-400 ring-offset-1 ring-offset-gray-900" />
+      )}
+      {/* Remove button */}
+      {onRemove && (
+        <button
+          onClick={e => { e.stopPropagation(); onRemove(image.id) }}
+          className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center"
+          aria-label="Remove image"
+        >
+          <X size={14} />
+        </button>
       )}
       {/* Checkbox */}
       <div className="absolute top-2 right-2">

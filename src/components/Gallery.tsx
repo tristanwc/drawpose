@@ -4,6 +4,8 @@ import { LayoutGrid, Columns2 } from 'lucide-react'
 import type { ImageItem } from '../types'
 import { ImageCard } from './ImageCard'
 
+type PendingRemoval = { type: 'single'; id: string } | { type: 'bulk' }
+
 type Props = {
   images: ImageItem[]
   selectedIds: Set<string>
@@ -12,15 +14,25 @@ type Props = {
   onToggle: (id: string) => void
   onSelectAll: () => void
   onDeselectAll: () => void
+  onRemove: (id: string) => void
+  onRemoveSelected: () => void
   nextBookmark: string | null
   onLoadMore: () => void
 }
 
-export function Gallery({ images, selectedIds, selectedCount, totalCount, onToggle, onSelectAll, onDeselectAll, nextBookmark, onLoadMore }: Props) {
+export function Gallery({ images, selectedIds, selectedCount, totalCount, onToggle, onSelectAll, onDeselectAll, onRemove, onRemoveSelected, nextBookmark, onLoadMore }: Props) {
   const [layout, setLayout] = useState<'grid' | 'masonry'>('masonry')
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [previewVisible, setPreviewVisible] = useState(false)
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function confirmRemoval() {
+    if (!pendingRemoval) return
+    if (pendingRemoval.type === 'single') onRemove(pendingRemoval.id)
+    else onRemoveSelected()
+    setPendingRemoval(null)
+  }
 
   function handleHoverStart(id: string) {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
@@ -52,6 +64,13 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, onTogg
             Deselect all
           </button>
           <button
+            onClick={() => setPendingRemoval({ type: 'bulk' })}
+            disabled={selectedCount === 0}
+            className="text-red-400 hover:text-red-300 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Remove selected ({selectedCount})
+          </button>
+          <button
             onClick={() => setLayout(l => l === 'grid' ? 'masonry' : 'grid')}
             title={layout === 'grid' ? 'Switch to masonry' : 'Switch to grid'}
             className="p-1.5 rounded text-gray-400 hover:text-gray-200 hover:bg-gray-700 transition-colors"
@@ -69,6 +88,7 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, onTogg
               image={image}
               selected={selectedIds.has(image.id)}
               onToggle={onToggle}
+              onRemove={id => setPendingRemoval({ type: 'single', id })}
               onHoverStart={() => handleHoverStart(image.id)}
               onHoverEnd={handleHoverEnd}
             />
@@ -82,6 +102,7 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, onTogg
                 image={image}
                 selected={selectedIds.has(image.id)}
                 onToggle={onToggle}
+                onRemove={id => setPendingRemoval({ type: 'single', id })}
                 masonry
               />
             </div>
@@ -97,6 +118,34 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, onTogg
           >
             Load more
           </button>
+        </div>
+      )}
+
+      {/* Confirm removal dialog */}
+      {pendingRemoval && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setPendingRemoval(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-80 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <p className="text-white font-medium mb-1">Remove images?</p>
+            <p className="text-gray-400 text-sm mb-5">
+              {pendingRemoval.type === 'bulk'
+                ? `Remove ${selectedCount} selected image${selectedCount === 1 ? '' : 's'} from the list?`
+                : 'Remove this image from the list?'}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setPendingRemoval(null)}
+                className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRemoval}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
