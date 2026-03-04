@@ -4,19 +4,36 @@ type Props = {
   image: ImageItem
   selected: boolean
   onToggle: (id: string) => void
+  masonry?: boolean
+  onHoverStart?: () => void
+  onHoverEnd?: () => void
 }
 
-export function ImageCard({ image, selected, onToggle }: Props) {
+export function ImageCard({ image, selected, onToggle, masonry, onHoverStart, onHoverEnd }: Props) {
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault()
+      onToggle(image.id)
+    }
+  }
+
   return (
     <div
       className="relative cursor-pointer group"
-      style={{ aspectRatio: '3/4' }}
+      style={masonry ? undefined : { aspectRatio: '3/4' }}
       onClick={() => onToggle(image.id)}
+      onKeyDown={handleKeyDown}
+      onMouseEnter={() => onHoverStart?.()}
+      onMouseLeave={() => onHoverEnd?.()}
+      tabIndex={0}
+      role="checkbox"
+      aria-checked={selected}
+      aria-label={image.alt}
     >
       <img
         src={image.url}
         alt={image.alt}
-        className="w-full h-full object-cover rounded-lg"
+        className={masonry ? 'w-full h-auto rounded-lg' : 'w-full h-full object-cover rounded-lg'}
       />
       {/* Dim overlay when selected */}
       <div

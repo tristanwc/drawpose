@@ -43,10 +43,18 @@ function App() {
     return () => document.removeEventListener('paste', handlePaste)
   }, [])
 
+  function selectAll() {
+    setSelectedIds(new Set(images.map(img => img.id)))
+  }
+
+  function deselectAll() {
+    setSelectedIds(new Set())
+  }
+
   function toggleImage(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
       return next
     })
   }
@@ -104,7 +112,11 @@ function App() {
       <Gallery
         images={images}
         selectedIds={selectedIds}
+        selectedCount={selectedIds.size}
+        totalCount={images.length}
         onToggle={toggleImage}
+        onSelectAll={selectAll}
+        onDeselectAll={deselectAll}
         nextBookmark={nextBookmark}
         onLoadMore={loadMore}
       />

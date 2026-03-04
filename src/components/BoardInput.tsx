@@ -23,7 +23,7 @@ export function BoardInput({ onLoad, isLoading, error }: Props) {
           type="url"
           value={value}
           onChange={e => setValue(e.target.value)}
-          placeholder="https://www.pinterest.com/user/board/"
+          placeholder="Pinterest board URL"
           className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 placeholder-gray-500"
           disabled={isLoading}
         />

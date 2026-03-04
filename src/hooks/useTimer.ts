@@ -1,15 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 
 export function useTimer(duration: number, onComplete: () => void) {
   const [timeLeft, setTimeLeft] = useState(duration)
   const [isPaused, setIsPaused] = useState(false)
+  const [prevDuration, setPrevDuration] = useState(duration)
   const onCompleteRef = useRef(onComplete)
-  onCompleteRef.current = onComplete
+  useLayoutEffect(() => {
+    onCompleteRef.current = onComplete
+  })
 
-  useEffect(() => {
+  if (prevDuration !== duration) {
+    setPrevDuration(duration)
     setTimeLeft(duration)
     setIsPaused(false)
-  }, [duration])
+  }
 
   useEffect(() => {
     if (isPaused) return
