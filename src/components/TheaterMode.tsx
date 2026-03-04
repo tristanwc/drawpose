@@ -11,6 +11,7 @@ type Props = {
 }
 
 function getEffectiveDuration(config: SessionConfig): number {
+  if (config.noTimer) return Number.MAX_SAFE_INTEGER
   return config.interval === 'custom' ? config.customSeconds : config.interval
 }
 
@@ -124,16 +125,18 @@ export function TheaterMode({ images, config, onExit }: Props) {
       {/* HUD bottom bar */}
       <div className="bg-black/70 backdrop-blur-sm px-6 py-4 flex items-center gap-6">
         {/* Progress bar + timer */}
-        <div className="flex items-center gap-3 flex-1">
-          <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-indigo-400 rounded-full"
-              style={{ width: `${progress * 100}%` }}
-              transition={{ duration: 0.5 }}
-            />
+        {!config.noTimer && (
+          <div className="flex items-center gap-3 flex-1">
+            <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-indigo-400 rounded-full"
+                style={{ width: `${progress * 100}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            <span className="text-white font-mono text-sm w-10 text-right">{timeLeft}s</span>
           </div>
-          <span className="text-white font-mono text-sm w-10 text-right">{timeLeft}s</span>
-        </div>
+        )}
 
         {/* Controls */}
         <div className="flex items-center gap-3">

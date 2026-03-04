@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Gallery } from './components/Gallery'
-import { SessionConfig } from './components/SessionConfig'
+import { SessionPanel } from './components/SessionPanel'
 import { TheaterMode } from './components/TheaterMode'
 import { BoardInput } from './components/BoardInput'
 import type { AppMode, ImageItem, SessionConfig as SessionConfigType } from './types'
@@ -9,7 +9,7 @@ import './App.css'
 function App() {
   const [mode, setMode] = useState<AppMode>('gallery')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [config, setConfig] = useState<SessionConfigType>({ interval: 30, customSeconds: 30 })
+  const [config, setConfig] = useState<SessionConfigType>({ interval: 30, customSeconds: 30, noTimer: false })
   const [images, setImages] = useState<ImageItem[]>([])
   const [nextBookmark, setNextBookmark] = useState<string | null>(null)
   const [boardLoading, setBoardLoading] = useState(false)
@@ -113,7 +113,7 @@ function App() {
   }
 
   return (
-    <div className="pb-24">
+    <div className="pl-44">
       <div className="px-4 pt-6 pb-2">
         <h1 className="text-2xl font-bold text-white tracking-tight">DrawPose</h1>
         <p className="text-gray-400 text-sm mt-1">Select images to include in your drawing session</p>
@@ -132,7 +132,7 @@ function App() {
         nextBookmark={nextBookmark}
         onLoadMore={loadMore}
       />
-      <SessionConfig
+      <SessionPanel
         config={config}
         selectedCount={selectedIds.size}
         onChange={setConfig}
