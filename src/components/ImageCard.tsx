@@ -1,0 +1,49 @@
+import type { ImageItem } from '../types'
+
+type Props = {
+  image: ImageItem
+  selected: boolean
+  onToggle: (id: string) => void
+}
+
+export function ImageCard({ image, selected, onToggle }: Props) {
+  return (
+    <div
+      className="relative cursor-pointer group"
+      style={{ aspectRatio: '3/4' }}
+      onClick={() => onToggle(image.id)}
+    >
+      <img
+        src={image.url}
+        alt={image.alt}
+        className="w-full h-full object-cover rounded-lg"
+      />
+      {/* Dim overlay when selected */}
+      <div
+        className={`absolute inset-0 rounded-lg transition-all duration-150 ${
+          selected ? 'bg-black/40' : 'bg-black/0 group-hover:bg-black/10'
+        }`}
+      />
+      {/* Selection ring */}
+      {selected && (
+        <div className="absolute inset-0 rounded-lg ring-2 ring-indigo-400 ring-offset-1 ring-offset-gray-900" />
+      )}
+      {/* Checkbox */}
+      <div className="absolute top-2 right-2">
+        <div
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+            selected
+              ? 'bg-indigo-500 border-indigo-500'
+              : 'bg-black/40 border-white/60 group-hover:border-white'
+          }`}
+        >
+          {selected && (
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
