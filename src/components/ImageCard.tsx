@@ -35,6 +35,7 @@ export function ImageCard({ image, selected, onToggle, onRemove, masonry, onHove
       <img
         src={image.url}
         alt={image.alt}
+        loading="lazy"
         className={masonry ? 'w-full h-auto rounded-lg' : 'w-full h-full object-cover rounded-lg'}
       />
       {/* Dim overlay when selected */}

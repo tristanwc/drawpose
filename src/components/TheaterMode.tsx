@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { SkipBack, SkipForward, Pause, Play, X, FlipHorizontal } from 'lucide-react'
+import { SkipBack, SkipForward, Pause, Play, X, FlipHorizontal, Loader2 } from 'lucide-react'
 import type { ImageItem, SessionConfig } from '../types'
 import { useTimer } from '../hooks/useTimer'
 
@@ -8,6 +8,9 @@ type Props = {
   images: ImageItem[]
   config: SessionConfig
   onExit: () => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
+  onNeedMore?: () => void
 }
 
 function getEffectiveDuration(config: SessionConfig): number {
@@ -15,15 +18,21 @@ function getEffectiveDuration(config: SessionConfig): number {
   return config.interval === 'custom' ? config.customSeconds : config.interval
 }
 
-export function TheaterMode({ images, config, onExit }: Props) {
+export function TheaterMode({ images, config, onExit, hasMore = false, isLoadingMore = false, onNeedMore }: Props) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [isEnded, setIsEnded] = useState(false)
   const duration = getEffectiveDuration(config)
+  const prevLengthRef = useRef(images.length)
 
   function handleNext() {
     setIndex(i => {
       if (i === images.length - 1) {
+        if (hasMore) {
+          onNeedMore?.()
+          // Stay at current image; new images arriving will advance via effect
+          return i
+        }
         setIsEnded(true)
         return i
       }
@@ -33,13 +42,45 @@ export function TheaterMode({ images, config, onExit }: Props) {
 
   const { timeLeft, isPaused, pause, resume, reset } = useTimer(duration, handleNext)
 
+  // Pause timer when ended
   useEffect(() => {
     if (isEnded) pause()
   }, [isEnded])
 
+  // When at last image waiting for more, pause timer to avoid rapid re-triggers
+  useEffect(() => {
+    if (index === images.length - 1 && hasMore && !isEnded) {
+      pause()
+      onNeedMore?.()
+    }
+  }, [index, images.length, hasMore, isEnded])
+
+  // Proactive prefetch when within 5 images of end
+  useEffect(() => {
+    if (hasMore && !isLoadingMore && images.length - index <= 5) {
+      onNeedMore?.()
+    }
+  }, [index, hasMore, isLoadingMore, images.length])
+
+  // When new images arrive and we were at the last one, advance
+  useEffect(() => {
+    const prev = prevLengthRef.current
+    prevLengthRef.current = images.length
+    if (images.length > prev && index === prev - 1) {
+      setIndex(prev)
+      reset(duration)
+      setFlipped(false)
+      setIsEnded(false)
+    }
+  }, [images.length])
+
   function goNext() {
     if (isEnded) return
     if (index === images.length - 1) {
+      if (hasMore) {
+        onNeedMore?.()
+        return
+      }
       setIsEnded(true)
       return
     }
@@ -92,6 +133,8 @@ export function TheaterMode({ images, config, onExit }: Props) {
 
   const current = images[index]
   const progress = timeLeft / duration
+  const atLastImage = index === images.length - 1
+  const showLoadingMore = atLastImage && (hasMore || isLoadingMore) && !isEnded
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col">
@@ -105,7 +148,7 @@ export function TheaterMode({ images, config, onExit }: Props) {
 
       {/* Image counter */}
       <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-black/60 text-white text-sm font-medium">
-        {index + 1} / {images.length}
+        {index + 1} / {images.length}{hasMore ? '+' : ''}
       </div>
 
       {/* Keyboard shortcuts panel — right side */}
@@ -153,6 +196,24 @@ export function TheaterMode({ images, config, onExit }: Props) {
               <p className="text-white text-4xl font-semibold tracking-wide drop-shadow-lg">
                 Session Completed
               </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Loading more overlay */}
+        <AnimatePresence>
+          {showLoadingMore && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="flex items-center gap-3 px-5 py-3 rounded-full bg-black/60 text-white text-lg font-medium">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading more...</span>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

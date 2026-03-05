@@ -15,3 +15,12 @@ export type SessionConfig = {
 export type AppMode = 'gallery' | 'session'
 
 export type BoardState = 'idle' | 'loading' | 'error'
+
+export type PinterestBoard = {
+  id: string
+  name: string
+  description: string
+  pinCount: number
+  imageUrl?: string
+  privacy: string
+}

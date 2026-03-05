@@ -11,16 +11,16 @@ type Props = {
   selectedIds: Set<string>
   selectedCount: number
   totalCount: number
+  boardKey: string
   onToggle: (id: string) => void
   onSelectAll: () => void
   onDeselectAll: () => void
   onRemove: (id: string) => void
   onRemoveSelected: () => void
-  nextBookmark: string | null
-  onLoadMore: () => void
+  onClear: () => void
 }
 
-export function Gallery({ images, selectedIds, selectedCount, totalCount, onToggle, onSelectAll, onDeselectAll, onRemove, onRemoveSelected, nextBookmark, onLoadMore }: Props) {
+export function Gallery({ images, selectedIds, selectedCount, totalCount, boardKey, onToggle, onSelectAll, onDeselectAll, onRemove, onRemoveSelected, onClear }: Props) {
   const [layout, setLayout] = useState<'grid' | 'masonry'>('masonry')
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [previewVisible, setPreviewVisible] = useState(false)
@@ -71,6 +71,13 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, onTogg
             Remove selected ({selectedCount})
           </button>
           <button
+            onClick={onClear}
+            disabled={totalCount === 0}
+            className="text-gray-400 hover:text-gray-300 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Clear all
+          </button>
+          <button
             onClick={() => setLayout(l => l === 'grid' ? 'masonry' : 'grid')}
             title={layout === 'grid' ? 'Switch to masonry' : 'Switch to grid'}
             className="p-1.5 rounded text-gray-400 hover:text-gray-200 hover:bg-gray-700 transition-colors"
@@ -80,46 +87,45 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, onTogg
         </div>
       </div>
 
-      {layout === 'grid' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
-          {images.map(image => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              selected={selectedIds.has(image.id)}
-              onToggle={onToggle}
-              onRemove={id => setPendingRemoval({ type: 'single', id })}
-              onHoverStart={() => handleHoverStart(image.id)}
-              onHoverEnd={handleHoverEnd}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="columns-2 sm:columns-4 lg:columns-5 gap-3 p-4">
-          {images.map(image => (
-            <div key={image.id} className="break-inside-avoid mb-3">
-              <ImageCard
-                image={image}
-                selected={selectedIds.has(image.id)}
-                onToggle={onToggle}
-                onRemove={id => setPendingRemoval({ type: 'single', id })}
-                masonry
-              />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={boardKey}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          {layout === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
+              {images.map(image => (
+                <ImageCard
+                  key={image.id}
+                  image={image}
+                  selected={selectedIds.has(image.id)}
+                  onToggle={onToggle}
+                  onRemove={id => setPendingRemoval({ type: 'single', id })}
+                  onHoverStart={() => handleHoverStart(image.id)}
+                  onHoverEnd={handleHoverEnd}
+                />
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-
-      {nextBookmark && (
-        <div className="flex justify-center py-6">
-          <button
-            onClick={onLoadMore}
-            className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors"
-          >
-            Load more
-          </button>
-        </div>
-      )}
+          ) : (
+            <div className="columns-2 sm:columns-4 lg:columns-5 gap-3 p-4">
+              {images.map(image => (
+                <div key={image.id} className="break-inside-avoid mb-3">
+                  <ImageCard
+                    image={image}
+                    selected={selectedIds.has(image.id)}
+                    onToggle={onToggle}
+                    onRemove={id => setPendingRemoval({ type: 'single', id })}
+                    masonry
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Confirm removal dialog */}
       {pendingRemoval && (
