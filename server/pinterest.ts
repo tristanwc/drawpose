@@ -45,7 +45,7 @@ export async function fetchUserBoards(
 
 async function scrapeBoardId(boardUrl: string): Promise<string> {
   const res = await fetch(boardUrl, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; croquis-app/1.0)' },
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; drawpose/1.0)' },
   })
   if (!res.ok) throw new Error(`Failed to fetch board page: ${res.status}`)
 

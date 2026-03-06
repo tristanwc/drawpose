@@ -1,22 +1,10 @@
 services:
   - type: web
-    name: croquis-app
+    name: drawpose
     env: node
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PINTEREST_CLIENT_ID
-        sync: false
-      - key: PINTEREST_CLIENT_SECRET
-        sync: false
-      - key: PINTEREST_REDIRECT_URI
-        sync: false
-      - key: ALLOWED_ORIGIN
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
-      - key: SESSION_SECRET
-        generateValue: false
-        sync: false
+      - fromGroup: DrawPose
