@@ -141,6 +141,17 @@ function App() {
     })
   }
 
+  function selectRandom(count: number) {
+    const unselected = images.filter(img => !selectedIds.has(img.id))
+    const shuffled = unselected.slice().sort(() => Math.random() - 0.5)
+    const toAdd = shuffled.slice(0, count)
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      toAdd.forEach(img => next.add(img.id))
+      return next
+    })
+  }
+
   function clearImages() {
     setImages([])
     setSelectedIds(new Set())
@@ -199,7 +210,7 @@ function App() {
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 lg:px-16 xl:px-32">
       <div className="px-4 pt-6 pb-2">
         <h1 className="text-2xl font-bold text-white tracking-tight">DrawPose</h1>
         <p className="text-gray-400 text-sm mt-1">Select images to include in your drawing session</p>
@@ -226,6 +237,7 @@ function App() {
         onToggle={toggleImage}
         onSelectAll={selectAll}
         onDeselectAll={deselectAll}
+        onSelectRandom={selectRandom}
         onRemove={removeImage}
         onRemoveSelected={removeSelected}
         onClear={clearImages}

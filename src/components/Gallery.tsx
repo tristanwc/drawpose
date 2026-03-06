@@ -15,17 +15,27 @@ type Props = {
   onToggle: (id: string) => void
   onSelectAll: () => void
   onDeselectAll: () => void
+  onSelectRandom: (count: number) => void
   onRemove: (id: string) => void
   onRemoveSelected: () => void
   onClear: () => void
 }
 
-export function Gallery({ images, selectedIds, selectedCount, totalCount, boardKey, onToggle, onSelectAll, onDeselectAll, onRemove, onRemoveSelected, onClear }: Props) {
+export function Gallery({ images, selectedIds, selectedCount, totalCount, boardKey, onToggle, onSelectAll, onDeselectAll, onSelectRandom, onRemove, onRemoveSelected, onClear }: Props) {
   const [layout, setLayout] = useState<'grid' | 'masonry'>('masonry')
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [previewVisible, setPreviewVisible] = useState(false)
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
+  const [showRandomInput, setShowRandomInput] = useState(false)
+  const [randomCount, setRandomCount] = useState('')
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function submitRandom() {
+    const n = parseInt(randomCount, 10)
+    if (!isNaN(n) && n > 0) onSelectRandom(n)
+    setShowRandomInput(false)
+    setRandomCount('')
+  }
 
   function confirmRemoval() {
     if (!pendingRemoval) return
@@ -63,6 +73,30 @@ export function Gallery({ images, selectedIds, selectedCount, totalCount, boardK
           >
             Deselect all
           </button>
+          {showRandomInput ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={1}
+                value={randomCount}
+                onChange={e => setRandomCount(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') submitRandom(); if (e.key === 'Escape') { setShowRandomInput(false); setRandomCount('') } }}
+                placeholder="count"
+                autoFocus
+                className="w-16 bg-gray-800 border border-gray-600 rounded px-2 py-0.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              />
+              <button onClick={submitRandom} className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors">Go</button>
+              <button onClick={() => { setShowRandomInput(false); setRandomCount('') }} className="text-gray-500 hover:text-gray-300 text-sm transition-colors">✕</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowRandomInput(true)}
+              disabled={totalCount === 0}
+              className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Select random
+            </button>
+          )}
           <button
             onClick={() => setPendingRemoval({ type: 'bulk' })}
             disabled={selectedCount === 0}
