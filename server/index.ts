@@ -90,7 +90,7 @@ app.get('/api/board', async (req, res) => {
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(import.meta.dirname, '../dist')))
-  app.get('*', (_req, res) => res.sendFile(path.join(import.meta.dirname, '../dist/index.html')))
+  app.get('/{*path}', (_req, res) => res.sendFile(path.join(import.meta.dirname, '../dist/index.html')))
 }
 
 app.listen(port, () => console.log(`Server on :${port}`))
