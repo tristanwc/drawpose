@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import type { Request, Response } from 'express'
 
 type UserSession = {
   accessToken: string
@@ -6,8 +7,44 @@ type UserSession = {
   expiresAt: number // Unix ms
 }
 
-let session: UserSession | null = null
 let pendingState: string | null = null
+
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-me'
+const SESSION_KEY = crypto.scryptSync(SESSION_SECRET, 'croquis-session-salt', 32)
+const isProduction = process.env.NODE_ENV === 'production'
+
+function encryptSession(data: UserSession): string {
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', SESSION_KEY, iv)
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()])
+  const tag = cipher.getAuthTag()
+  return [iv.toString('hex'), tag.toString('hex'), ciphertext.toString('hex')].join('.')
+}
+
+function decryptSession(cookie: string): UserSession | null {
+  try {
+    const [ivHex, tagHex, ciphertextHex] = cookie.split('.')
+    if (!ivHex || !tagHex || !ciphertextHex) return null
+    const iv = Buffer.from(ivHex, 'hex')
+    const tag = Buffer.from(tagHex, 'hex')
+    const ciphertext = Buffer.from(ciphertextHex, 'hex')
+    const decipher = crypto.createDecipheriv('aes-256-gcm', SESSION_KEY, iv)
+    decipher.setAuthTag(tag)
+    const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()])
+    return JSON.parse(plain.toString('utf8')) as UserSession
+  } catch {
+    return null
+  }
+}
+
+function setSessionCookie(res: Response, data: UserSession): void {
+  res.cookie('session', encryptSession(data), {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  })
+}
 
 function getCredentials(): string {
   const clientId = process.env.PINTEREST_CLIENT_ID
@@ -41,11 +78,11 @@ export function validateState(state: string): boolean {
   return true
 }
 
-export async function exchangeCode(code: string): Promise<void> {
+export async function exchangeCode(code: string, res: Response): Promise<void> {
   const redirectUri = process.env.PINTEREST_REDIRECT_URI
   if (!redirectUri) throw new Error('PINTEREST_REDIRECT_URI must be set in .env')
 
-  const res = await fetch('https://api.pinterest.com/v5/oauth/token', {
+  const tokenRes = await fetch('https://api.pinterest.com/v5/oauth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -57,22 +94,20 @@ export async function exchangeCode(code: string): Promise<void> {
       redirect_uri: redirectUri,
     }),
   })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Token exchange failed: ${res.status} ${body}`)
+  if (!tokenRes.ok) {
+    const body = await tokenRes.text()
+    throw new Error(`Token exchange failed: ${tokenRes.status} ${body}`)
   }
-  const data = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
-  session = {
+  const data = await tokenRes.json() as { access_token: string; refresh_token: string; expires_in: number }
+  setSessionCookie(res, {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: Date.now() + data.expires_in * 1000,
-  }
+  })
 }
 
-async function refreshAccessToken(): Promise<void> {
-  if (!session) throw new Error('No session to refresh')
-
-  const res = await fetch('https://api.pinterest.com/v5/oauth/token', {
+async function refreshAccessToken(session: UserSession, res: Response): Promise<UserSession> {
+  const tokenRes = await fetch('https://api.pinterest.com/v5/oauth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -83,33 +118,35 @@ async function refreshAccessToken(): Promise<void> {
       refresh_token: session.refreshToken,
     }),
   })
-  if (!res.ok) {
-    const body = await res.text()
-    session = null
-    throw new Error(`Token refresh failed: ${res.status} ${body}`)
+  if (!tokenRes.ok) {
+    const body = await tokenRes.text()
+    throw new Error(`Token refresh failed: ${tokenRes.status} ${body}`)
   }
-  const data = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
-  session = {
+  const data = await tokenRes.json() as { access_token: string; refresh_token: string; expires_in: number }
+  const updated: UserSession = {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: Date.now() + data.expires_in * 1000,
   }
+  setSessionCookie(res, updated)
+  return updated
 }
 
-export async function getToken(): Promise<string> {
+export async function getToken(req: Request, res: Response): Promise<string> {
+  let session = decryptSession(req.cookies?.session ?? '')
   if (!session) throw new Error('Not authenticated')
 
   // Auto-refresh if within 2 days of expiry
   if (Date.now() > session.expiresAt - 2 * 24 * 60 * 60 * 1000) {
-    await refreshAccessToken()
+    session = await refreshAccessToken(session, res)
   }
-  return session!.accessToken
+  return session.accessToken
 }
 
-export function isAuthenticated(): boolean {
-  return session !== null
+export function isAuthenticated(req: Request): boolean {
+  return decryptSession(req.cookies?.session ?? '') !== null
 }
 
-export function clearSession(): void {
-  session = null
+export function clearSession(res: Response): void {
+  res.clearCookie('session')
 }

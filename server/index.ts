@@ -1,16 +1,20 @@
 import 'dotenv/config'
+import path from 'node:path'
 import express from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import { fetchBoardPins, fetchUserBoards } from './pinterest.js'
 import { generateAuthUrl, validateState, exchangeCode, isAuthenticated, clearSession, getToken } from './auth.js'
 
 const app = express()
+const port = process.env.PORT || 3001
 const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173'
-app.use(cors({ origin: allowedOrigin }))
+app.use(cors({ origin: allowedOrigin, credentials: true }))
+app.use(cookieParser())
 app.use(express.json())
 
-app.get('/api/auth/status', (_req, res) => {
-  res.json({ authenticated: isAuthenticated() })
+app.get('/api/auth/status', (req, res) => {
+  res.json({ authenticated: isAuthenticated(req) })
 })
 
 app.get('/api/auth/login', (_req, res) => {
@@ -34,7 +38,7 @@ app.get('/api/auth/callback', async (req, res) => {
     return
   }
   try {
-    await exchangeCode(code)
+    await exchangeCode(code, res)
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
     res.redirect(`${frontendUrl}?auth=success`)
   } catch (err) {
@@ -43,19 +47,20 @@ app.get('/api/auth/callback', async (req, res) => {
   }
 })
 
-app.post('/api/auth/logout', (_req, res) => {
-  clearSession()
+app.post('/api/auth/logout', (req, res) => {
+  clearSession(res)
   res.json({ ok: true })
 })
 
 app.get('/api/boards', async (req, res) => {
-  if (!isAuthenticated()) {
+  if (!isAuthenticated(req)) {
     res.status(401).json({ error: 'Not authenticated' })
     return
   }
   try {
+    const token = await getToken(req, res)
     const { bookmark } = req.query as { bookmark?: string }
-    const result = await fetchUserBoards(bookmark)
+    const result = await fetchUserBoards(bookmark, token)
     res.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -64,7 +69,7 @@ app.get('/api/boards', async (req, res) => {
 })
 
 app.get('/api/board', async (req, res) => {
-  if (!isAuthenticated()) {
+  if (!isAuthenticated(req)) {
     res.status(401).json({ error: 'Not authenticated' })
     return
   }
@@ -74,7 +79,8 @@ app.get('/api/board', async (req, res) => {
     return
   }
   try {
-    const result = await fetchBoardPins(url ?? '', bookmark, boardId)
+    const token = await getToken(req, res)
+    const result = await fetchBoardPins(url ?? '', bookmark, boardId, token)
     res.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -82,4 +88,9 @@ app.get('/api/board', async (req, res) => {
   }
 })
 
-app.listen(3001, () => console.log('Server on :3001'))
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(import.meta.dirname, '../dist')))
+  app.get('*', (_req, res) => res.sendFile(path.join(import.meta.dirname, '../dist/index.html')))
+}
+
+app.listen(port, () => console.log(`Server on :${port}`))

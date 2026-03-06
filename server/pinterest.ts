@@ -1,10 +1,10 @@
 import type { ImageItem, PinterestBoard } from '../src/types/index.js'
-import { getToken } from './auth.js'
 
 export async function fetchUserBoards(
   bookmark?: string,
+  token?: string,
 ): Promise<{ boards: PinterestBoard[]; nextBookmark?: string }> {
-  const token = await getToken()
+  if (!token) throw new Error('Not authenticated')
   const params = new URLSearchParams({ page_size: '25', privacy: 'PUBLIC' })
   if (bookmark) params.set('bookmark', bookmark)
 
@@ -74,8 +74,9 @@ export async function fetchBoardPins(
   url: string,
   bookmark?: string,
   boardId?: string,
+  token?: string,
 ): Promise<{ images: ImageItem[]; nextBookmark?: string; boardId: string }> {
-  const token = await getToken()
+  if (!token) throw new Error('Not authenticated')
 
   // First load: scrape board_id from public HTML. Paginated calls pass boardId directly.
   const resolvedBoardId = boardId ?? await scrapeBoardId(url)
