@@ -7,10 +7,10 @@
     "dev": "concurrently \"vite\" \"tsx watch server/index.ts\"",
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && tsc -p tsconfig.server.json",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "tsx server/index.ts"
+    "start": "node dist-server/index.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

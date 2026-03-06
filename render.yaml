@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: croquis-app
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PINTEREST_CLIENT_ID
+        sync: false
+      - key: PINTEREST_CLIENT_SECRET
+        sync: false
+      - key: PINTEREST_REDIRECT_URI
+        sync: false
+      - key: ALLOWED_ORIGIN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: false
+        sync: false

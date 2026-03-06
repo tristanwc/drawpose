@@ -47,7 +47,7 @@ app.get('/api/auth/callback', async (req, res) => {
   }
 })
 
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', (_req, res) => {
   clearSession(res)
   res.json({ ok: true })
 })
