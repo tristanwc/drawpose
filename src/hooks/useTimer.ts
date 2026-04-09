@@ -19,6 +19,7 @@ export function useTimer(duration: number, onComplete: () => void) {
     if (isPaused) return
     if (timeLeft <= 0) {
       onCompleteRef.current()
+      setTimeLeft(duration)
       return
     }
     const id = setInterval(() => {
