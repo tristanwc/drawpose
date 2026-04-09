@@ -16,7 +16,7 @@ app.get('/api/auth/status', (req, res) => {
 });
 app.get('/api/auth/login', (_req, res) => {
     try {
-        const url = generateAuthUrl();
+        const url = generateAuthUrl(res);
         res.redirect(url);
     }
     catch (err) {
@@ -30,7 +30,7 @@ app.get('/api/auth/callback', async (req, res) => {
         res.status(400).json({ error: 'Missing code or state' });
         return;
     }
-    if (!validateState(state)) {
+    if (!validateState(req, res, state)) {
         res.status(403).json({ error: 'Invalid state parameter' });
         return;
     }
@@ -84,8 +84,11 @@ app.get('/api/board', async (req, res) => {
         res.status(500).json({ error: message });
     }
 });
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
     app.use(express.static(path.join(import.meta.dirname, '../../dist')));
     app.get('/{*path}', (_req, res) => res.sendFile(path.join(import.meta.dirname, '../../dist/index.html')));
 }
-app.listen(port, () => console.log(`Server on :${port}`));
+if (!process.env.VERCEL) {
+    app.listen(port, () => console.log(`Server on :${port}`));
+}
+export default app;

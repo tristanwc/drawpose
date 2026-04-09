@@ -7,8 +7,6 @@ type UserSession = {
   expiresAt: number // Unix ms
 }
 
-let pendingState: string | null = null
-
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-me'
 const SESSION_KEY = crypto.scryptSync(SESSION_SECRET, 'croquis-session-salt', 32)
 const isProduction = process.env.NODE_ENV === 'production'
@@ -55,26 +53,33 @@ function getCredentials(): string {
   return Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 }
 
-export function generateAuthUrl(): string {
+export function generateAuthUrl(res: Response): string {
   const clientId = process.env.PINTEREST_CLIENT_ID
   const redirectUri = process.env.PINTEREST_REDIRECT_URI
   if (!clientId || !redirectUri) {
     throw new Error('PINTEREST_CLIENT_ID and PINTEREST_REDIRECT_URI must be set in .env')
   }
-  pendingState = crypto.randomBytes(16).toString('hex')
+  const state = crypto.randomBytes(16).toString('hex')
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  })
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'boards:read,pins:read',
-    state: pendingState,
+    state,
   })
   return `https://www.pinterest.com/oauth/?${params}`
 }
 
-export function validateState(state: string): boolean {
-  if (!pendingState || state !== pendingState) return false
-  pendingState = null
+export function validateState(req: Request, res: Response, state: string): boolean {
+  const cookieState = req.cookies?.oauth_state as string | undefined
+  if (!cookieState || state !== cookieState) return false
+  res.clearCookie('oauth_state')
   return true
 }
 

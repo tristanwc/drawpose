@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-let pendingState = null;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-me';
 const SESSION_KEY = crypto.scryptSync(SESSION_SECRET, 'croquis-session-salt', 32);
 const isProduction = process.env.NODE_ENV === 'production';
@@ -43,26 +42,33 @@ function getCredentials() {
     }
     return Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 }
-export function generateAuthUrl() {
+export function generateAuthUrl(res) {
     const clientId = process.env.PINTEREST_CLIENT_ID;
     const redirectUri = process.env.PINTEREST_REDIRECT_URI;
     if (!clientId || !redirectUri) {
         throw new Error('PINTEREST_CLIENT_ID and PINTEREST_REDIRECT_URI must be set in .env');
     }
-    pendingState = crypto.randomBytes(16).toString('hex');
+    const state = crypto.randomBytes(16).toString('hex');
+    res.cookie('oauth_state', state, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 10 * 60 * 1000, // 10 minutes
+    });
     const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: 'boards:read,pins:read',
-        state: pendingState,
+        state,
     });
     return `https://www.pinterest.com/oauth/?${params}`;
 }
-export function validateState(state) {
-    if (!pendingState || state !== pendingState)
+export function validateState(req, res, state) {
+    const cookieState = req.cookies?.oauth_state;
+    if (!cookieState || state !== cookieState)
         return false;
-    pendingState = null;
+    res.clearCookie('oauth_state');
     return true;
 }
 export async function exchangeCode(code, res) {
